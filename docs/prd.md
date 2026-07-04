@@ -23,8 +23,7 @@ Build an analytical pipeline and time series forecasting model to determine the 
 - The system must evaluate multicollinearity using VIF.
 
 ### 4.3 Modeling
-- **Univariate Forecasting:** Implement ARIMA to isolate the inertial component of inflation.
-- **Multivariate Forecasting:** Implement VAR to measure the impact of external pillars (Growth, Monetary, Foreign Affairs).
+- **Multivariate Forecasting:** Implement VAR to measure the impact of external pillars (Growth, Monetary, Foreign Affairs) as well as the inertial component (FEVD).
 - The system must output standard evaluation metrics (RMSE, MAPE) for comparison.
 
 ### 4.4 Visualization
@@ -32,6 +31,5 @@ Build an analytical pipeline and time series forecasting model to determine the 
 
 ## 5. Success Criteria
 - The models must successfully run and converge on the provided dataset.
-- The ARIMA model should provide a mathematically sound baseline forecast.
-- The VAR model must clearly demonstrate whether external factors significantly Grager-cause inflation compared to internal inertia.
+- The VAR model must clearly demonstrate whether external factors significantly Grager-cause inflation compared to internal inertia (via FEVD).
 - The analysis must yield a conclusive answer to the "Ultimate Question".

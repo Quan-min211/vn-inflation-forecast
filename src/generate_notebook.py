@@ -113,18 +113,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from scipy.stats import shapiro, jarque_bera, probplot
-
-from statsmodels.tsa.stattools import adfuller, kpss
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.stattools import adfuller
 import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
-from statsmodels.stats.diagnostic import het_breuschpagan
 
-from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
-
-from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.vector_ar.var_model import VAR
 from statsmodels.tsa.stattools import grangercausalitytests
 
@@ -140,7 +132,7 @@ plt.rcParams['font.size'] = 12"""))
     cells.append(code("""# Tải dữ liệu
 # Nếu chạy trên Google Colab, hãy upload file dataset_project1.xlsx
 # hoặc sửa đường dẫn cho phù hợp
-df = pd.read_excel('/content/dataset_project1.xlsx')
+df = pd.read_excel('../data/dataset_project1.xlsx')
 display(df.head(10))"""))
 
     cells.append(md("""### 2.3 Data Overview: Hiểu cấu trúc dữ liệu
@@ -241,66 +233,7 @@ print(f"\\nSau khi xử lý - Số giá trị thiếu còn lại: {df.isnull().s
 print(f"Shape: {df.shape}")
 display(df.head())"""))
 
-    cells.append(md("""### 2.6 Univariate Distribution Analysis: Đặc trưng phân phối từng biến
-
-**Mục đích:** Hiểu hình dạng phân phối của mỗi biến TRƯỚC KHI đưa vào mô hình.
-- **Tại sao quan trọng?** Nhiều mô hình thống kê (OLS, ARIMA) giả định phần dư (residuals) có phân phối chuẩn. Nếu dữ liệu gốc đã lệch (skewed) quá mạnh, kết quả mô hình có thể không đáng tin.
-- **Ta cần biết gì?** Mỗi biến có phân phối chuẩn không? Có outlier không? Hình dạng phân phối nói lên điều gì về kinh tế?"""))
-
-    cells.append(code("""# Phân tích phân phối cho các biến Growth Rate (%)
-growth_vars = ['cpi_growth_percent', 'gdp_deflator_percent',
-               'gdp_growth_percent', 'unemployment_rate',
-               'lending_interest_percent']
-
-fig, axes = plt.subplots(len(growth_vars), 3, figsize=(20, 5 * len(growth_vars)))
-
-for i, var in enumerate(growth_vars):
-    data = df[var].dropna()
-
-    # Histogram
-    axes[i, 0].hist(data, bins=15, edgecolor='black', alpha=0.7, color='steelblue')
-    axes[i, 0].set_title(f'{var}\\n(Histogram)', fontweight='bold')
-    axes[i, 0].axvline(data.mean(), color='red', linestyle='--', label=f'Mean={data.mean():.2f}')
-    axes[i, 0].axvline(data.median(), color='green', linestyle='--', label=f'Median={data.median():.2f}')
-    axes[i, 0].legend(fontsize=9)
-
-    # Boxplot
-    axes[i, 1].boxplot(data, vert=True)
-    axes[i, 1].set_title(f'{var}\\n(Boxplot - phát hiện Outliers)', fontweight='bold')
-
-    # Q-Q Plot
-    probplot(data, dist="norm", plot=axes[i, 2])
-    axes[i, 2].set_title(f'{var}\\n(Q-Q Plot - kiểm tra phân phối chuẩn)', fontweight='bold')
-
-plt.suptitle('PHÂN TÍCH PHÂN PHỐI CÁC BIẾN TỶ LỆ (%)', fontsize=18, fontweight='bold', y=1.02)
-plt.tight_layout()
-plt.show()"""))
-
-    cells.append(code("""# Kiểm định phân phối chuẩn cho từng biến
-print("=" * 80)
-print("KIỂM ĐỊNH PHÂN PHỐI CHUẨN (Shapiro-Wilk & Jarque-Bera)")
-print("=" * 80)
-print(f"{'Biến':<35} {'Shapiro p-value':>15} {'JB p-value':>15} {'Kết luận':>15}")
-print("-" * 80)
-
-all_numeric = df.select_dtypes(include=[np.number]).columns
-for var in all_numeric:
-    data = df[var].dropna()
-    if len(data) >= 8:  # Cần tối thiểu 8 quan sát cho Shapiro
-        stat_sw, p_sw = shapiro(data)
-        stat_jb, p_jb = jarque_bera(data)
-        normal = "Chuẩn" if (p_sw > 0.05 and p_jb > 0.05) else "KHÔNG chuẩn"
-        print(f"{var:<35} {p_sw:>15.4f} {p_jb:>15.4f} {normal:>15}")"""))
-
-    cells.append(md("""**Nhận xét phân phối - Ý nghĩa kinh tế:**
-
-- **`cpi_growth_percent` (Lạm phát):** Phân phối lệch phải (right-skewed). *Tại sao?* Vì lạm phát tại Việt Nam có những đợt "bùng nổ" bất thường (2008: ~23%, 2011: ~18%) — đây là các outlier ngoại lai. Ngược lại, giảm phát (CPI < 0) rất hiếm. Điều này cho thấy lạm phát tại VN có tính "bất đối xứng": tăng dễ, giảm khó.
-
-- **`gdp_growth_percent`:** Gần phân phối chuẩn hơn nhưng có đuôi trái dài. *Tại sao?* GDP Việt Nam thường tăng trưởng ổn định 5-7%, nhưng có những năm suy thoái đột ngột (2020: COVID-19).
-
-- **Các biến Index (cpi_index, gdp_deflator_index, domestic_credit_index, exchange_rate):** KHÔNG có phân phối chuẩn — chúng là chuỗi tích lũy có xu hướng tăng theo thời gian. Đây là dấu hiệu rõ ràng của **tính KHÔNG dừng (non-stationarity)** — một vấn đề sẽ được xử lý ở Chương 4."""))
-
-    cells.append(md("""### 2.7 Time Series Trend Visualization: Xu hướng theo thời gian
+    cells.append(md("""### 2.6 Time Series Trend Visualization: Xu hướng theo thời gian
 
 **Mục đích:** Trước khi chạy bất kỳ model nào, ta cần "nhìn" dữ liệu. Biểu đồ xu hướng giúp:
 1. Phát hiện các sự kiện kinh tế lớn ảnh hưởng đến dữ liệu.
@@ -376,7 +309,7 @@ plt.show()"""))
 
 4. **GDP:** Tăng trưởng ổn định 5-7% với duy nhất 2020 suy giảm mạnh do COVID-19.
 
-**Kết luận quan trọng:** Các chuỗi Index (CPI Index, Credit Index, Exchange Rate) có xu hướng tăng liên tục → chắc chắn KHÔNG dừng. Điều này buộc ta phải lấy sai phân (differencing) trước khi đưa vào ARIMA/VAR ở Chương 4."""))
+**Kết luận quan trọng:** Các chuỗi Index (CPI Index, Credit Index, Exchange Rate) có xu hướng tăng liên tục → chắc chắn KHÔNG dừng. Điều này buộc ta phải lấy sai phân (differencing) trước khi đưa vào VAR ở Chương 4."""))
 
     # =========================================================================
     # CHAPTER 3: RELATIONSHIP ANALYSIS
@@ -414,52 +347,7 @@ plt.show()"""))
 - `cpi_growth_percent` và `lending_interest_percent`: Tương quan thuận → Khi lạm phát tăng, NHNN tăng lãi suất để kiềm chế (phản ứng chính sách).
 - `domestic_credit_index`, `import_index`, `export_index`, `exchange_rate`: Tương quan cao với nhau → CẢNH BÁO đa cộng tuyến (multicollinearity)! Cần kiểm tra VIF."""))
 
-    cells.append(md("""### 3.2 Phillips Curve Analysis: Kiểm chứng lý thuyết Đường cong Phillips
-
-**Lý thuyết:** A.W. Phillips (1958) phát hiện mối quan hệ nghịch giữa Lạm phát và Thất nghiệp — khi thất nghiệp giảm, lạm phát tăng (do áp lực tăng lương).
-
-**Câu hỏi:** Đường cong Phillips có đúng cho Việt Nam không? Nếu KHÔNG, tại sao?"""))
-
-    cells.append(code("""# Phillips Curve: Regression CPI Growth ~ Unemployment Rate
-X = df['unemployment_rate']
-y = df['cpi_growth_percent']
-X_with_const = sm.add_constant(X)
-
-phillips_model = sm.OLS(y, X_with_const).fit()
-
-fig, axes = plt.subplots(1, 2, figsize=(18, 7))
-
-# Scatter Plot + Regression Line
-sns.regplot(x='unemployment_rate', y='cpi_growth_percent', data=df,
-            scatter_kws={'alpha': 0.6, 's': 80}, line_kws={'color': 'red'},
-            ax=axes[0])
-axes[0].set_title('PHILLIPS CURVE: Lạm phát vs Thất nghiệp (Việt Nam 1996-2024)', fontsize=14, fontweight='bold')
-axes[0].set_xlabel('Unemployment Rate (%)')
-axes[0].set_ylabel('CPI Growth (%)')
-axes[0].grid(True, linestyle='--', alpha=0.5)
-
-# Residual plot
-axes[1].scatter(phillips_model.fittedvalues, phillips_model.resid, alpha=0.6, s=80)
-axes[1].axhline(0, color='red', linestyle='--')
-axes[1].set_title('Phần dư (Residuals) của mô hình Phillips', fontsize=14, fontweight='bold')
-axes[1].set_xlabel('Fitted Values')
-axes[1].set_ylabel('Residuals')
-axes[1].grid(True, linestyle='--', alpha=0.5)
-
-plt.tight_layout()
-plt.show()
-
-print(phillips_model.summary())"""))
-
-    cells.append(md("""**Giải thích kết quả Phillips Curve:**
-
-- **R-squared** rất thấp → Thất nghiệp CHỈ giải thích một phần rất nhỏ biến động lạm phát tại Việt Nam.
-- **Tại sao Đường cong Phillips không hoạt động tốt ở VN?**
-  1. Thị trường lao động VN có nhiều lao động phi chính thức → tỷ lệ thất nghiệp chính thức không phản ánh đúng thực tế.
-  2. Lạm phát VN chịu ảnh hưởng nhiều từ yếu tố cung (giá xăng dầu, tỷ giá) hơn là cầu lao động.
-  3. Điều này gợi ý rằng ta cần tìm "thủ phạm" khác cho lạm phát VN → Chuyển sang phân tích VAR đa biến."""))
-
-    cells.append(md("""### 3.3 Multicollinearity Check (VIF)
+    cells.append(md("""### 3.2 Multicollinearity Check (VIF)
 
 **Tại sao cần kiểm tra VIF?**
 - VIF (Variance Inflation Factor) đo mức độ "trùng lặp thông tin" giữa các biến.
@@ -507,7 +395,7 @@ plt.show()"""))
 >
 > Hãy tưởng tượng bạn muốn dự báo nhiệt độ ngày mai. Nếu bạn sống ở vùng nhiệt đới (nhiệt độ dao động quanh 30°C ổn định) → dễ dự báo. Nhưng nếu bạn sống ở nơi đang nóng lên liên tục (20°C → 25°C → 30°C → 35°C...) → rất khó dự báo vì "quy luật" liên tục thay đổi.
 >
-> Tương tự, mô hình ARIMA/VAR CHỈ hoạt động đúng khi chuỗi dữ liệu "dừng" — tức là giá trị trung bình và phương sai không thay đổi theo thời gian."""))
+> Tương tự, mô hình VAR CHỈ hoạt động đúng khi chuỗi dữ liệu "dừng" — tức là giá trị trung bình và phương sai không thay đổi theo thời gian."""))
 
     cells.append(md("### 4.1 ADF Test: Augmented Dickey-Fuller"))
 
@@ -565,185 +453,32 @@ for col in analysis_vars:
     status = "DỪNG ✓" if result[1] < 0.05 else "KHÔNG dừng ✗"
     print(f"{col:<35} {result[0]:>15.4f} {result[1]:>15.4f} {status:>15}")"""))
 
+
+
     # =========================================================================
-    # CHAPTER 5: ARIMA
+    # CHAPTER 5: VAR
     # =========================================================================
-    cells.append(md("""## **CHƯƠNG 5: Mô hình ARIMA — Giả thuyết "Quán tính" (Bệnh tự miễn)**
+    cells.append(md("""## **CHƯƠNG 5: Mô hình VAR — Phân tích "Tác nhân bên ngoài" và Quán tính Lạm phát**
 ---
 
-> **Ý tưởng cốt lõi:** Nếu lạm phát thực sự là "bệnh tự miễn" (do tâm lý kỳ vọng), thì chỉ cần dùng dữ liệu lạm phát QUÁ KHỨ đã đủ để dự báo lạm phát TƯƠNG LAI — không cần biết GDP, Tỷ giá, hay bất kỳ yếu tố nào khác.
+> **Ý tưởng cốt lõi:** VAR (Vector Autoregression) cho phép ta đồng thời trả lời HAI câu hỏi quan trọng nhất:
+> 1. **"Lạm phát có tự sinh ra chính nó không?"** — Thông qua phân rã phương sai (FEVD), nếu CPI tự giải thích >90% biến động → quán tính ("Bệnh tự miễn") là chủ đạo.
+> 2. **"Yếu tố BÊN NGOÀI nào thực sự 'bẻ lái' lạm phát?"** — Thông qua Granger Causality và IRF, ta xác định được kênh truyền dẫn nào đáng kể.
 
-### 5.1 ARIMA là gì? Tại sao chọn nó?
-
-**ARIMA(p, d, q)** gồm 3 thành phần:
-- **AR(p) - AutoRegressive:** Dùng `p` giá trị LẠM PHÁT quá khứ để dự đoán. Ví dụ: AR(2) = "Lạm phát hôm nay phụ thuộc vào lạm phát 1 năm trước và 2 năm trước."
-- **I(d) - Integrated:** Số lần lấy sai phân để chuỗi dừng. `d=0` nếu chuỗi đã dừng, `d=1` nếu cần sai phân 1 lần.
-- **MA(q) - Moving Average:** Dùng `q` sai số DỰ BÁO quá khứ để hiệu chỉnh. Ví dụ: MA(1) = "Nếu dự báo năm trước sai, năm nay hiệu chỉnh theo hướng ngược lại."
-
-**Tại sao chọn ARIMA cho giả thuyết "Bệnh tự miễn"?**
-- ARIMA CHỈ sử dụng dữ liệu của CHÍNH biến CPI → hoàn hảo để kiểm tra: "Liệu lạm phát có tự sinh ra lạm phát?"
-- Nếu ARIMA dự báo chính xác → chứng minh quán tính (kỳ vọng) là động lực chính.
-- Nếu ARIMA dự báo kém → cần tìm yếu tố bên ngoài (VAR ở Chương 6)."""))
-
-    cells.append(md("### 5.2 ACF & PACF: Chọn tham số p, q"))
-
-    cells.append(code("""# Chuỗi CPI growth
-cpi_series = df['cpi_growth_percent'].dropna()
-
-fig, axes = plt.subplots(1, 2, figsize=(18, 6))
-
-plot_acf(cpi_series, lags=12, ax=axes[0])
-axes[0].set_title('ACF (Autocorrelation Function)\\n→ Giúp chọn q cho MA', fontsize=14, fontweight='bold')
-
-plot_pacf(cpi_series, lags=12, ax=axes[1])
-axes[1].set_title('PACF (Partial Autocorrelation Function)\\n→ Giúp chọn p cho AR', fontsize=14, fontweight='bold')
-
-plt.suptitle('PHÂN TÍCH ACF & PACF CHO CPI GROWTH', fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()"""))
-
-    cells.append(md("""**Cách đọc ACF/PACF:**
-- **PACF "cắt" tại lag k:** → chọn p = k cho AR.
-- **ACF "cắt" tại lag k:** → chọn q = k cho MA.
-- "Cắt" = giá trị đột ngột rơi vào vùng không có ý nghĩa thống kê (vùng xanh).
-- Nếu cả hai đều "tắt dần" (tailing off) → dùng ARMA(p,q) kết hợp."""))
-
-    cells.append(md("### 5.3 Huấn luyện mô hình ARIMA"))
-
-    cells.append(code("""# Thử nhiều bộ tham số và chọn theo AIC
-print("TÌM KIẾM BỘ THAM SỐ ARIMA TỐI ƯU (theo AIC)")
-print("=" * 60)
-
-best_aic = float('inf')
-best_order = None
-best_model = None
-
-for p in range(0, 4):
-    for d in range(0, 2):
-        for q in range(0, 4):
-            try:
-                model = ARIMA(cpi_series, order=(p, d, q))
-                result = model.fit()
-                if result.aic < best_aic:
-                    best_aic = result.aic
-                    best_order = (p, d, q)
-                    best_model = result
-                print(f"  ARIMA({p},{d},{q}) - AIC: {result.aic:.2f}")
-            except:
-                pass
-
-print(f"\\n{'='*60}")
-print(f"MÔ HÌNH TỐI ƯU: ARIMA{best_order} với AIC = {best_aic:.2f}")
-print(f"{'='*60}")"""))
-
-    cells.append(code("""# Kết quả chi tiết
-print(best_model.summary())"""))
-
-    cells.append(md("""**Tại sao chọn theo AIC?**
-- AIC (Akaike Information Criterion) cân bằng giữa "mô hình khớp tốt" và "mô hình đơn giản". AIC thấp nhất = mô hình tối ưu.
-- Nếu thêm tham số mà AIC không giảm → tham số đó "thừa" (overfitting)."""))
-
-    cells.append(md("### 5.4 Kiểm tra phần dư (Residual Diagnostics)"))
-
-    cells.append(code("""# Kiểm tra phần dư ARIMA
-residuals = best_model.resid
-
-fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-
-# Residual time series
-axes[0,0].plot(residuals)
-axes[0,0].axhline(0, color='red', linestyle='--')
-axes[0,0].set_title('Phần dư theo thời gian (phải ngẫu nhiên)', fontweight='bold')
-
-# Histogram
-axes[0,1].hist(residuals, bins=15, edgecolor='black', alpha=0.7, density=True)
-from scipy.stats import norm
-x = np.linspace(residuals.min(), residuals.max(), 100)
-axes[0,1].plot(x, norm.pdf(x, residuals.mean(), residuals.std()), 'r-', linewidth=2)
-axes[0,1].set_title('Phân phối phần dư (phải gần chuẩn)', fontweight='bold')
-
-# Q-Q Plot
-probplot(residuals, dist="norm", plot=axes[1,0])
-axes[1,0].set_title('Q-Q Plot phần dư', fontweight='bold')
-
-# ACF of residuals
-plot_acf(residuals, lags=12, ax=axes[1,1])
-axes[1,1].set_title('ACF phần dư (phải nằm trong vùng xanh)', fontweight='bold')
-
-plt.suptitle('CHẨN ĐOÁN PHẦN DƯ MÔ HÌNH ARIMA', fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
-
-# Ljung-Box test
-from statsmodels.stats.diagnostic import acorr_ljungbox
-lb_test = acorr_ljungbox(residuals, lags=10, return_df=True)
-print("LJUNG-BOX TEST (H0: Phần dư là nhiễu trắng)")
-print("p-value > 0.05 → Phần dư là nhiễu trắng (tốt)")
-display(lb_test)"""))
-
-    cells.append(md("""**Phần dư có phải "nhiễu trắng" (white noise) không?**
-- Nếu **CÓ** (p-value Ljung-Box > 0.05): Mô hình đã "bắt" hết tín hiệu trong dữ liệu. Phần còn lại chỉ là nhiễu ngẫu nhiên → Mô hình đáng tin.
-- Nếu **KHÔNG**: Còn "tín hiệu ẩn" mà ARIMA chưa nắm bắt → Cần yếu tố bên ngoài (→ VAR)."""))
-
-    cells.append(md("### 5.5 Dự báo & Đánh giá độ tin cậy"))
-
-    cells.append(code("""# Dự báo 3 năm tiếp theo
-arima_forecast = best_model.get_forecast(steps=3)
-arima_forecast_df = arima_forecast.summary_frame()
-
-plt.figure(figsize=(14, 7))
-plt.plot(cpi_series.tail(15), label='CPI Growth thực tế', marker='o', linewidth=2)
-plt.plot(arima_forecast.predicted_mean, label='ARIMA Forecast', marker='s',
-         color='red', linestyle='--', linewidth=2)
-plt.fill_between(arima_forecast_df.index,
-                 arima_forecast_df['mean_ci_lower'],
-                 arima_forecast_df['mean_ci_upper'],
-                 color='pink', alpha=0.3, label='Khoảng tin cậy 95%')
-plt.title('DỰ BÁO TỪ QUÁN TÍNH: Lạm phát kỳ vọng duy trì đà hiện tại', fontsize=16, fontweight='bold')
-plt.xlabel('Năm')
-plt.ylabel('CPI Growth (%)')
-plt.legend()
-plt.grid(True, linestyle='--', alpha=0.5)
-plt.show()
-
-# Đánh giá
-print("=" * 60)
-print("ĐÁNH GIÁ MÔ HÌNH ARIMA")
-print("=" * 60)
-fitted = best_model.fittedvalues
-actual = cpi_series[fitted.index]
-print(f"RMSE: {np.sqrt(mean_squared_error(actual, fitted)):.4f}")
-print(f"MAE:  {mean_absolute_error(actual, fitted):.4f}")
-print(f"MAPE: {mean_absolute_percentage_error(actual, fitted)*100:.2f}%")"""))
-
-    cells.append(md("""**Dự báo ARIMA có đáng tin không?**
-
-1. **Khoảng tin cậy (Confidence Interval):** Dải hồng càng rộng → dự báo càng bất định. Dự báo xa hơn thường có khoảng tin cậy rộng hơn.
-2. **MAPE (Mean Absolute Percentage Error):** Đo sai số trung bình theo %. MAPE < 10% = tốt, 10-20% = khá, > 20% = kém.
-3. **Hạn chế quan trọng:** ARIMA chỉ dùng dữ liệu lạm phát quá khứ → KHÔNG THỂ dự báo "cú sốc" từ bên ngoài (ví dụ: đột nhiên giá dầu tăng gấp đôi). Đây là lý do cần VAR ở Chương 6."""))
-
-    # =========================================================================
-    # CHAPTER 6: VAR
-    # =========================================================================
-    cells.append(md("""## **CHƯƠNG 6: Mô hình VAR — Giả thuyết "Tác nhân bên ngoài"**
----
-
-> **Ý tưởng cốt lõi:** Nếu ARIMA trả lời "Lạm phát có tự sinh ra không?", thì VAR trả lời "Yếu tố BÊN NGOÀI nào thực sự 'bẻ lái' lạm phát?"
-
-### 6.1 VAR là gì? Tại sao chọn nó?
+### 5.1 VAR là gì? Tại sao chọn nó?
 
 **VAR (Vector Autoregression)** là hệ phương trình đồng thời:
 - Mỗi biến được dự báo bằng giá trị quá khứ của CHÍNH NÓ và TẤT CẢ các biến khác.
 - Ví dụ: `CPI_t = f(CPI_{t-1}, GDP_{t-1}, ExchangeRate_{t-1}, ...)`
 
 **Tại sao chọn VAR?**
-- Khác ARIMA (chỉ 1 biến), VAR mô hình hóa **sự tương tác** giữa nhiều biến.
-- VAR cho phép sử dụng **Granger Causality Test** (ai dẫn dắt ai?) và **Impulse Response Function** (một cú sốc lan tỏa thế nào?).
-- Đây chính là công cụ để kiểm tra: "Tỷ giá, GDP, Tín dụng có thực sự TÁC ĐỘNG đến Lạm phát không?"
+- VAR mô hình hóa **sự tương tác** giữa nhiều biến kinh tế vĩ mô cùng lúc.
+- VAR cho phép sử dụng **Granger Causality Test** (ai dẫn dắt ai?), **Impulse Response Function** (một cú sốc lan tỏa thế nào?), và **FEVD** (ai chịu trách nhiệm cho biến động lạm phát?).
+- Đặc biệt, **FEVD** là công cụ mạnh nhất để trả lời The Ultimate Question: phần lớn biến động CPI do quán tính bản thân hay do tác nhân ngoại sinh?
 
 **Điều kiện tiên quyết:** TẤT CẢ các chuỗi đưa vào VAR phải DỪNG (stationary). Đây là lý do Chương 4 rất quan trọng."""))
 
-    cells.append(md("### 6.2 Chuẩn bị dữ liệu cho VAR"))
+    cells.append(md("### 5.2 Chuẩn bị dữ liệu cho VAR"))
 
     cells.append(code("""# Chọn các biến đại diện cho từng trụ cột (đã loại bỏ đa cộng tuyến)
 var_vars = ['cpi_growth_percent', 'gdp_growth_percent',
@@ -761,7 +496,7 @@ for col in var_vars:
     status = "DỪNG ✓" if result[1] < 0.05 else "KHÔNG dừng ✗"
     print(f"  {col}: p-value = {result[1]:.4f} → {status}")"""))
 
-    cells.append(md("### 6.3 Chọn bậc trễ tối ưu (Lag Order Selection)"))
+    cells.append(md("### 5.3 Chọn bậc trễ tối ưu (Lag Order Selection)"))
 
     cells.append(code("""# Tìm lag tối ưu theo AIC/BIC
 var_model_temp = VAR(var_data)
@@ -780,7 +515,7 @@ print(f"\\nBậc trễ tối ưu theo AIC: {optimal_lag}")"""))
 - Quá ít lag → bỏ sót hiệu ứng dài hạn. Quá nhiều lag → mất bậc tự do → mô hình không ổn định.
 - AIC giúp tìm điểm cân bằng tối ưu."""))
 
-    cells.append(md("### 6.4 Granger Causality Test: Ai dẫn dắt ai?"))
+    cells.append(md("### 5.4 Granger Causality Test: Ai dẫn dắt ai?"))
 
     cells.append(code("""# Granger Causality: Kiểm tra từng biến có "dẫn dắt" CPI không
 print("=" * 80)
@@ -819,7 +554,7 @@ for cause_var in var_vars:
 - **Lending Interest → CPI:** Nếu p-value > 0.05 → Lãi suất KHÔNG dẫn dắt lạm phát rõ rệt.
   - *Tại sao?* Vì lãi suất tại VN thường là **phản ứng** (NHNN tăng lãi suất SAU KHI lạm phát đã tăng), chứ không phải **nguyên nhân** gốc."""))
 
-    cells.append(md("### 6.5 Impulse Response Function (IRF): Cú sốc lan tỏa thế nào?"))
+    cells.append(md("### 5.5 Impulse Response Function (IRF): Cú sốc lan tỏa thế nào?"))
 
     cells.append(code("""# Fit VAR model
 var_model = VAR(var_data)
@@ -840,7 +575,7 @@ plt.show()"""))
 - **Đường dưới 0:** Cú sốc LÀM GIẢM lạm phát.
 - **Tốc độ về 0:** Nhanh = ảnh hưởng ngắn hạn. Chậm = ảnh hưởng kéo dài."""))
 
-    cells.append(md("### 6.6 Forecast Error Variance Decomposition (FEVD)"))
+    cells.append(md("### 5.6 Forecast Error Variance Decomposition (FEVD)"))
 
     cells.append(code("""# FEVD
 fevd = var_result.fevd(10)
@@ -866,43 +601,133 @@ FEVD trả lời câu hỏi: *"Trong tổng biến động của Lạm phát, ba
 - Yếu tố bên ngoài quan trọng nhất (nếu có) chỉ đóng góp một phần nhỏ.
 
 **Ta dựa vào đâu để kết luận "Bệnh tự miễn"?**
-1. **ARIMA accuracy:** Mô hình chỉ dùng quá khứ CPI đã dự báo tốt → Quán tính mạnh.
-2. **FEVD numbers:** >90% biến động CPI do chính CPI giải thích → Yếu tố ngoại sinh yếu.
-3. **Granger Causality:** Chỉ 1-2 biến có tính "dẫn dắt", và ngay cả chúng cũng chỉ giải thích <10% phương sai."""))
+1. **FEVD numbers:** >90% biến động CPI do chính CPI giải thích → Yếu tố ngoại sinh yếu.
+2. **Granger Causality:** Chỉ 1-2 biến có tính "dẫn dắt", và ngay cả chúng cũng chỉ giải thích <10% phương sai.
+3. **IRF:** Phản ứng của CPI trước cú sốc từ các biến ngoại sinh nhanh chóng tắt dần → ảnh hưởng yếu và ngắn hạn."""))
+
+    cells.append(md("### 5.7 FEVD Bar Chart: Giải mã động lực \"Bệnh tự miễn\""))
+
+    cells.append(code("""# =====================================================================
+# BIỂU ĐỒ FEVD DẠNG CỘT CHỒNG — Phân rã phương sai sai số dự báo CPI
+# =====================================================================
+
+# Lấy dữ liệu FEVD cho biến CPI
+cpi_idx = list(var_data.columns).index('cpi_growth_percent')
+fevd_cpi = fevd.decomp[:, cpi_idx, :]  # shape: (periods, n_vars)
+n_periods = fevd_cpi.shape[0]
+n_vars = fevd_cpi.shape[1]
+
+# Nhãn tiếng Việt cho các biến
+var_labels_vn = {
+    'cpi_growth_percent': 'Quán tính tự thân (CPI)',
+    'gdp_growth_percent': 'Tăng trưởng kinh tế (GDP)',
+    'lending_interest_percent': 'Lãi suất cho vay (IR)',
+    'officical_exchange_rate_percent': 'Tỷ giá hối đoái (EX)'
+}
+labels = [var_labels_vn.get(c, c) for c in var_data.columns]
+
+# Bảng màu chuyên nghiệp
+bar_colors = ['#1B3A4B', '#2EC4B6', '#FF6B6B', '#C0C0C0', '#FFCA3A']
+
+fig, ax = plt.subplots(figsize=(16, 8))
+
+x = np.arange(1, n_periods + 1)
+bar_width = 0.65
+bottom = np.zeros(n_periods)
+
+for j in range(n_vars):
+    values = fevd_cpi[:, j] * 100  # Chuyển sang %
+    bars = ax.bar(x, values, bar_width, bottom=bottom,
+                  label=labels[j], color=bar_colors[j % len(bar_colors)],
+                  edgecolor='white', linewidth=0.5)
+    bottom += values
+
+# Annotation: hiển thị % tổng đóng góp của yếu tố ngoại sinh trên đỉnh mỗi cột
+for i in range(n_periods):
+    cpi_pct = fevd_cpi[i, cpi_idx] * 100
+    external_pct = 100 - cpi_pct
+    # Hiển thị % quán tính CPI bên trong thanh
+    ax.text(x[i], cpi_pct / 2, f'{cpi_pct:.1f}%',
+            ha='center', va='center', fontsize=9, fontweight='bold', color='white')
+    # Hiển thị % yếu tố ngoại sinh trên đỉnh cột
+    if external_pct > 0.5:
+        ax.text(x[i], 100 + 1.5, f'{external_pct:.1f}%',
+                ha='center', va='bottom', fontsize=9, fontweight='bold', color='#2EC4B6')
+
+# Tiêu đề và nhãn trục
+ax.set_title('PHÂN RÃ PHƯƠNG SAI SAI SỐ DỰ BÁO CỦA BIẾN LẠM PHÁT (FEVD)\\n'
+             'Giải mã động lực "Bệnh tự miễn" và các tác nhân vĩ mô qua 10 kỳ',
+             fontsize=15, fontweight='bold', pad=20)
+ax.set_xlabel('Chu kỳ dự báo sau cú sốc (Periods)', fontsize=12, fontweight='bold')
+ax.set_ylabel('Tỷ lệ đóng góp vào phương sai biến động (%)', fontsize=12, fontweight='bold')
+ax.set_xticks(x)
+ax.set_xticklabels([f'Kỳ {i}' for i in x], fontsize=10)
+ax.set_ylim(0, 110)
+ax.set_xlim(0.3, n_periods + 0.7)
+
+# Legend phía trên biểu đồ
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.0),
+          ncol=n_vars, fontsize=10, frameon=True, fancybox=True,
+          shadow=False, title='Nguồn gốc cú sốc tác động:', title_fontsize=11)
+
+# Grid nhẹ chỉ trục y
+ax.yaxis.grid(True, linestyle='--', alpha=0.3)
+ax.set_axisbelow(True)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+
+plt.tight_layout()
+plt.show()
+
+# In bảng số liệu FEVD
+print("\\n" + "=" * 80)
+print("BẢNG SỐ LIỆU FEVD CHO CPI GROWTH (%)")
+print("=" * 80)
+fevd_df = pd.DataFrame(fevd_cpi * 100, columns=labels,
+                        index=[f'Kỳ {i+1}' for i in range(n_periods)])
+display(fevd_df.round(2))"""))
+
+    cells.append(md("""**Đọc biểu đồ FEVD dạng cột chồng:**
+
+- Mỗi cột đại diện cho **1 kỳ dự báo** (từ Kỳ 1 đến Kỳ 10 sau cú sốc ban đầu).
+- **Phần xanh đậm (Quán tính CPI):** Tỷ lệ % biến động lạm phát được giải thích bởi chính lạm phát quá khứ — tức "Bệnh tự miễn".
+- **Các phần còn lại:** Đóng góp của GDP, Lãi suất, Tỷ giá — tức "Tác nhân bên ngoài".
+- **Kỳ 1:** CPI luôn tự giải thích 100% (vì cú sốc chưa kịp lan truyền).
+- **Từ Kỳ 2 trở đi:** Nếu phần xanh đậm vẫn chiếm >90% → Quán tính áp đảo → Lạm phát VN chủ yếu là "Bệnh tự miễn".
+- **Con số % trên đỉnh mỗi cột** cho thấy tổng đóng góp của tất cả yếu tố ngoại sinh — càng nhỏ càng khẳng định vai trò yếu ớt của chúng."""))
 
     # =========================================================================
-    # CHAPTER 7: CONCLUSION
+    # CHAPTER 6: CONCLUSION
     # =========================================================================
-    cells.append(md("""## **CHƯƠNG 7: Kết luận — Trả lời Câu hỏi Tối thượng**
+    cells.append(md("""## **CHƯƠNG 6: Kết luận — Trả lời Câu hỏi Tối thượng**
 ---"""))
 
-    cells.append(md("""### 7.1 Bảng Tổng kết Bằng chứng
+    cells.append(md("""### 6.1 Bảng Tổng kết Bằng chứng
 
-| Tiêu chí | ARIMA (Quán tính) | VAR (Yếu tố ngoại sinh) |
-|---|---|---|
-| **Mô hình dùng gì?** | Chỉ dữ liệu CPI quá khứ | CPI + GDP + Tỷ giá + Lãi suất |
-| **Giả thuyết kiểm tra** | "Bệnh tự miễn" — lạm phát tự sinh ra | "Tác nhân bên ngoài" — do GDP, tỷ giá... |
-| **Kết quả dự báo** | Tốt (MAPE thấp) | Bổ sung thêm thông tin nhưng không vượt trội |
-| **FEVD** | N/A | CPI tự giải thích >90% biến động |
-| **Granger Causality** | N/A | Chỉ 1-2 biến có tính dẫn dắt yếu |
-| **Kết luận** | ✅ Quán tính là động lực CHÍNH | GDP là kênh ngoại sinh duy nhất đáng kể |"""))
+| Tiêu chí | Kết quả từ mô hình VAR |
+|---|---|
+| **Mô hình dùng gì?** | CPI + GDP + Tỷ giá + Lãi suất (Vector Autoregression) |
+| **Câu hỏi 1: Quán tính có mạnh không?** | FEVD: CPI tự giải thích >90% biến động → Quán tính áp đảo |
+| **Câu hỏi 2: Yếu tố ngoại sinh nào đáng kể?** | Granger Causality: Chỉ 1-2 biến có tính dẫn dắt yếu (<10% phương sai) |
+| **IRF** | Cú sốc từ các biến ngoại sinh tắt dần nhanh → ảnh hưởng ngắn hạn |
+| **Kết luận** | ✅ "Bệnh tự miễn" — Quán tính là động lực CHÍNH của lạm phát VN |"""))
 
-    cells.append(md("""### 7.2 Phán quyết: Trả lời The Ultimate Question
+    cells.append(md("""### 6.2 Phán quyết: Trả lời The Ultimate Question
 
 > **"Lạm phát tại Việt Nam chủ yếu là do 'Bệnh tự miễn' (Quán tính) hay 'Tác nhân bên ngoài'?"**
 
 **Câu trả lời dựa trên dữ liệu:**
 
-🔬 **Lạm phát tại Việt Nam trong 3 thập kỷ qua chủ yếu mang tính QUÁN TÍNH (Bệnh tự miễn).**
+**Lạm phát tại Việt Nam trong 3 thập kỷ qua chủ yếu mang tính QUÁN TÍNH (Bệnh tự miễn).**
 
-**Bằng chứng:**
-1. **Mô hình ARIMA** (chỉ dùng lạm phát quá khứ) đã dự báo tương đối chính xác → Lạm phát "tự sinh ra chính nó" thông qua kỳ vọng tâm lý.
-2. **Phân rã phương sai FEVD** cho thấy >90% biến động lạm phát được giải thích bởi chính quán tính lạm phát, không phải bởi GDP, Tỷ giá hay Lãi suất.
-3. **Granger Causality** chỉ ra rằng trong các yếu tố ngoại sinh, chỉ GDP Growth có tính "dẫn dắt" đáng kể, nhưng đóng góp rất nhỏ (<10% phương sai).
+**Bằng chứng từ mô hình VAR:**
+1. **Phân rã phương sai FEVD** cho thấy >90% biến động lạm phát được giải thích bởi chính quán tính lạm phát, không phải bởi GDP, Tỷ giá hay Lãi suất.
+2. **Granger Causality** chỉ ra rằng trong các yếu tố ngoại sinh, chỉ GDP Growth có tính "dẫn dắt" đáng kể, nhưng đóng góp rất nhỏ (<10% phương sai).
+3. **IRF (Impulse Response Function)** cho thấy phản ứng của CPI trước các cú sốc ngoại sinh tắt dần rất nhanh — ảnh hưởng ngắn hạn và yếu.
 
 **Cơ chế kinh tế:** Khi người dân và doanh nghiệp *kỳ vọng* giá cả sẽ tăng → họ đẩy giá bán lên trước → giá thực sự tăng → xác nhận kỳ vọng → vòng lặp tiếp tục. Đây chính là "Bệnh tự miễn" — hệ miễn dịch (kỳ vọng) tấn công chính cơ thể (nền kinh tế)."""))
 
-    cells.append(md("""### 7.3 Hàm ý Chính sách
+    cells.append(md("""### 6.3 Hàm ý Chính sách
 
 Nếu lạm phát chủ yếu do quán tính kỳ vọng, thì **chính sách hiệu quả nhất** không phải là can thiệp mạnh vào tỷ giá hay lãi suất, mà là:
 
@@ -910,7 +735,7 @@ Nếu lạm phát chủ yếu do quán tính kỳ vọng, thì **chính sách hi
 2. **Truyền thông chính sách:** Giải thích minh bạch các quyết định tiền tệ → giảm bất định → giảm kỳ vọng lạm phát.
 3. **Giám sát GDP:** Vì GDP là kênh ngoại sinh duy nhất đáng kể, cần theo dõi tốc độ tăng trưởng để phát hiện sớm áp lực cầu kéo."""))
 
-    cells.append(md("""### 7.4 Hạn chế & Hướng phát triển
+    cells.append(md("""### 6.4 Hạn chế & Hướng phát triển
 
 - **Hạn chế:**
   - Dữ liệu chỉ có 29 quan sát (29 năm) → Sample nhỏ làm giảm "sức mạnh thống kê" của các kiểm định.
@@ -920,7 +745,8 @@ Nếu lạm phát chủ yếu do quán tính kỳ vọng, thì **chính sách hi
 - **Hướng phát triển:**
   - Sử dụng dữ liệu tháng/quý từ GSO để tăng số quan sát.
   - Áp dụng SVAR (Structural VAR) với ràng buộc lý thuyết kinh tế.
-  - So sánh với Machine Learning models (LSTM, Random Forest) để kiểm chứng."""))
+  - So sánh với Machine Learning models (LSTM, Random Forest) để kiểm chứng.
+  - Bổ sung mô hình ARIMA đơn biến để so sánh trực tiếp khả năng dự báo giữa mô hình quán tính thuần túy và mô hình đa biến."""))
 
     # Build notebook structure
     notebook = {

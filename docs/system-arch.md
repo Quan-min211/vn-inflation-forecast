@@ -18,12 +18,9 @@ Unlike complex cloud-based architectures, this project focuses on a streamlined,
 - **Stationarity Transformation:** First-order or log differencing applied based on the Augmented Dickey-Fuller (ADF) test results.
 
 ### 2.3 Analytics & Modeling Layer
-- **Univariate Path:** 
-  - `statsmodels.tsa.arima.model.ARIMA`
-  - Purpose: Baseline forecast and inertia measurement.
-- **Multivariate Path:** 
+- **Modeling Path:** 
   - `statsmodels.tsa.vector_ar.var_model.VAR`
-  - Purpose: Cross-variable shock analysis (IRF, FEVD).
+  - Purpose: Cross-variable shock analysis (IRF, FEVD) and inertia measurement.
 
 ### 2.4 Presentation Layer
 - **Tools:** `matplotlib.pyplot`, `seaborn`
@@ -38,8 +35,6 @@ graph TD
     C -->|Non-Stationary| D[Differencing]
     C -->|Stationary| E[Modeling]
     D --> E
-    E --> F[ARIMA - Inertia]
-    E --> G[VAR - Macro Shocks]
-    F --> H[Forecast Charts]
+    E --> G[VAR - Macro Shocks & Inertia]
     G --> I[IRF & FEVD Charts]
 ```

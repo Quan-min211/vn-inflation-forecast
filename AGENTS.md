@@ -12,9 +12,9 @@
 Build an end-to-end **time series analysis and macroeconomic forecasting pipeline** for the Vietnamese
 economy, covering:
 - Macroeconomic indicators from **1996 to 2022** (with forecasts extending to 2024).
-- The ultimate goal is to answer: Is Vietnam's inflation primarily caused by "inertia/expectations" (ARIMA) or "external macroeconomic factors" (VAR)?
+- The ultimate goal is to answer: Is Vietnam's inflation primarily caused by "inertia/expectations" (quantified via FEVD) or "external macroeconomic factors" (VAR)?
 
-The output includes comprehensive statistical tests, Time Series models (ARIMA & VAR), and visual interpretations.
+The output includes comprehensive statistical tests, Time Series models (VAR), and visual interpretations.
 
 ---
 
@@ -27,7 +27,7 @@ The output includes comprehensive statistical tests, Time Series models (ARIMA &
 |----------|-------------|
 | [`docs/etl-spec.md`](docs/etl-spec.md) | Data cleaning, preprocessing rules, and missing value imputation for the 11 macroeconomic variables. |
 | [`docs/data-dictionary.md`](docs/data-dictionary.md) | Looking up field names, definitions, and the 4 economic pillars they represent. |
-| [`docs/ml-spec.md`](docs/ml-spec.md) | Writing any model training/evaluation code (ARIMA, VAR, Stationarity tests). |
+| [`docs/ml-spec.md`](docs/ml-spec.md) | Writing any model training/evaluation code (VAR, Stationarity tests). |
 | [`docs/dashboard-spec.md`](docs/dashboard-spec.md) | Building Python visualizations (matplotlib/seaborn) or dashboard charts. |
 | [`docs/prd.md`](docs/prd.md) | Checking functional requirements or acceptance criteria. |
 | [`docs/master-plan.md`](docs/master-plan.md) | Understanding team roles and execution tracks. |
@@ -51,8 +51,7 @@ The dataset `dataset_project1.xlsx` represents the **4 Pillars of Macroeconomics
 These constraints are non-negotiable acceptance criteria.
 - **Target Variable:** `cpi_growth_percent`
 - **Stationarity:** Augmented Dickey-Fuller (ADF) test must be performed. Non-stationary data must be differenced.
-- **ARIMA (Inertia Model):** Focuses solely on the historical pattern of CPI growth to determine the "auto-immune" or inertial inflation factor.
-- **VAR (Multivariate Model):** Explores the impact of the other external macro factors on CPI. Requires checking for Multicollinearity (VIF) and Granger Causality.
+- **VAR (Multivariate Model):** Explores the impact of the other external macro factors on CPI, and quantifies internal inertia using Forecast Error Variance Decomposition (FEVD). Requires checking for Multicollinearity (VIF) and Granger Causality.
 
 ---
 
