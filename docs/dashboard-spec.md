@@ -1,29 +1,28 @@
-# Dashboard & Visualization Specification
-# Vietnam Inflation Forecast Project
+# Dashboard Specification
 
-This document defines the visualization requirements for the project. While the previous architecture relied on Looker Studio and BigQuery, this project uses Python-based visualizations directly within the Jupyter Notebook (`matplotlib` and `seaborn`).
+## Purpose
 
-## 1. General Principles
-- **Theme:** Clean, academic style suitable for reports.
-- **Labels:** All axes must have clear labels with units (e.g., "%", "Index", "Year").
-- **Titles:** Chart titles should convey the *insight*, not just describe the axes (e.g., "DỰ BÁO TỪ QUÁN TÍNH: Lạm phát kỳ vọng tiếp tục duy trì đà tăng nhẹ").
+The Streamlit dashboard must no longer act as a broad EDA showcase. It exists to communicate one conclusion:
 
-## 2. Required Visualizations
+> Vietnam's inflation is primarily inertial ("Bệnh tự miễn"), not primarily driven by external macro shocks.
 
-### 2.1 EDA (Exploratory Data Analysis)
-- **Time Series Line Charts:** Trend of `cpi_growth_percent` overlaid with `gdp_growth_percent` over the 1996-2022 period to visualize the trade-off.
-- **Correlation Heatmap:** A Seaborn heatmap showing the Pearson correlation coefficients between the 11 variables to identify initial collinearity.
-- **Missing Values Matrix:** A heatmap showing the location of null values in the raw dataset.
+## Pages
 
-### 2.2 Time Series Diagnostics
-- **ACF & PACF Plots:** For the `cpi_growth_percent` series (both original and differenced) to justify the selection of ARIMA (p, q) parameters.
-- **Residual Plots:** Histogram and Q-Q plots of model residuals to verify the assumption of normal distribution and white noise.
+1. **Home**
+   - Shows the research question, FEVD verdict, and CPI trend.
+2. **Data Exploration**
+   - Shows only the four variables used in VAR.
+3. **Stationarity Testing**
+   - Shows ADF before/after transformation and VIF.
+4. **VAR Model**
+   - Shows VAR(1), short forecast, Granger support, and FEVD over **10 periods**.
+5. **Conclusion**
+   - Restates the verdict and policy implications.
 
-### 2.3 Model Results
-- **ARIMA Forecast Plot:** 
-  - Show historical actual values (solid line).
-  - Show forecasted values (dashed red line).
-  - Include a confidence interval band (e.g., 95% shaded region, colored pink/light red).
-- **VAR Impulse Response Functions (IRF):**
-  - A grid of plots showing how `cpi_growth_percent` responds to a 1-standard-deviation shock in other variables (e.g., exchange rate, credit index) over a 10-year horizon.
-- **VAR Variance Decomposition:** Stacked bar chart showing the percentage of inflation variance explained by itself vs. external factors over time.
+## Required Main Chart
+
+The main dashboard chart is the FEVD stacked bar chart over 10 periods:
+
+- Dark blue: CPI self-impact / inertia.
+- Other colors: GDP, lending interest, exchange rate.
+- Each period must show external share so the viewer can immediately see that external factors are secondary.

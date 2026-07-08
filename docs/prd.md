@@ -1,35 +1,34 @@
-# Product Requirements Document (PRD)
-# Vietnam Inflation Forecast Project
+# Product Requirements Document
 
-## 1. Project Objective
-Build an analytical pipeline and time series forecasting model to determine the core drivers of inflation in Vietnam (1996-2022) and project the CPI growth trend for the near future (up to 2024-2025).
+## Objective
 
-## 2. Problem Statement
-**"Trong 3 thập kỷ qua, Lạm phát tại Việt Nam chủ yếu là do 'Bệnh tự miễn' (Quán tính tự sinh ra do tâm lý kỳ vọng) hay do 'Tác nhân bên ngoài' (Tỷ giá, Tín dụng, Tăng trưởng GDP)? Cần can thiệp vào đâu để kiểm soát nó?"**
+Build a minimal academic pipeline that answers:
 
-## 3. Target Audience
-- Academic instructors and review boards (HCMUTE DAAN course).
-- Economists and financial analysts studying the Vietnamese market.
+> Is Vietnam's inflation mainly caused by **inertia/expectations** or by **external macroeconomic factors**?
 
-## 4. Functional Requirements
+## Final Claim
 
-### 4.1 Data Processing
-- Load data from the provided Excel file.
-- Perform necessary imputation for missing macroeconomic data.
-- Output clean, indexed time series DataFrames.
+The product must support this claim with data:
 
-### 4.2 Statistical Analysis
-- The system must verify the stationarity of all time series using the ADF test.
-- The system must evaluate multicollinearity using VIF.
+> Vietnam's inflation in the observed period is primarily **inertial** ("Bệnh tự miễn").
 
-### 4.3 Modeling
-- **Multivariate Forecasting:** Implement VAR to measure the impact of external pillars (Growth, Monetary, Foreign Affairs) as well as the inertial component (FEVD).
-- The system must output standard evaluation metrics (RMSE, MAPE) for comparison.
+## Functional Requirements
 
-### 4.4 Visualization
-- Generate Python-based plots (matplotlib/seaborn) to display the historical trends, ACF/PACF diagnostics, IRF, and forecast trajectories with confidence intervals.
+1. Load and clean the Excel dataset locally with pandas.
+2. Handle missing values in `domestic_credit_index` and `lending_interest_percent`.
+3. Keep the VAR model focused on four variables:
+   - CPI growth
+   - GDP growth
+   - lending interest
+   - exchange rate
+4. Run ADF and VIF before modeling.
+5. Fit VAR(1).
+6. Produce FEVD for **10 periods**.
+7. Use FEVD as the central evidence in notebook, dashboard, and report.
 
-## 5. Success Criteria
-- The models must successfully run and converge on the provided dataset.
-- The VAR model must clearly demonstrate whether external factors significantly Grager-cause inflation compared to internal inertia (via FEVD).
-- The analysis must yield a conclusive answer to the "Ultimate Question".
+## Out of Scope
+
+- Broad correlation chapter as a standalone narrative.
+- Large EDA dashboard.
+- Cloud infrastructure.
+- Extra ML models unless explicitly requested.
