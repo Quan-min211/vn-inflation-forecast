@@ -32,6 +32,73 @@ st.success(
     "chủ yếu mang tính QUÁN TÍNH (Bệnh tự miễn)."
 )
 
+# ── PIPELINE DIAGRAM ────────────────────────────────────────────
+# x range 0..1, node half-width = 0.13 so boxes are narrow
+st.subheader("Pipeline Phân tích")
+
+# (cx, cy, title, subtitle, fill_color, border_color)
+NODES = [
+    (0.50, 5.6, "📂 Dữ liệu Thô",       "dataset_project1.xlsx · 27 năm · 11 biến", "#1a3a5c", "#4a9fd5"),
+    (0.50, 4.4, "🧹 Làm sạch",          "Nội suy missing · Giữ 4 biến",           "#1a3a5c", "#4a9fd5"),
+    (0.50, 3.2, "📊 Kiểm định",         "ADF Test · VIF",                           "#1a4a1a", "#4ab04a"),
+    (0.50, 2.0, "🤖 VAR(1)",           "Vector Autoregression · 4 biến",          "#4a1a1a", "#d05050"),
+    (0.10, 0.8, "📉 Granger",          "Tính dẫn dắt",                             "#3a2a0a", "#c09030"),
+    (0.50, 0.8, "📈 IRF",             "Phản ứng xung",                            "#3a2a0a", "#c09030"),
+    (0.90, 0.8, "🔬 FEVD 10 kỳ",      "Phân rã phương sai",                       "#3a2a0a", "#e07020"),
+    (0.50, -0.4, "✅ Kết luận",        f"CPI ≈ {inertia_avg:.1f}% → QUÁN TÍNH",       "#0a3a1a", "#30a060"),
+]
+
+EDGES = [(0,1),(1,2),(2,3),(3,4),(3,5),(3,6),(4,7),(5,7),(6,7)]
+
+HW = 0.17   # half-width of each box
+HH = 0.28   # half-height of each box
+
+fig_pipe = go.Figure()
+
+# Arrows
+for si, di in EDGES:
+    sx, sy = NODES[si][0], NODES[si][1]
+    dx, dy = NODES[di][0], NODES[di][1]
+    fig_pipe.add_annotation(
+        x=dx, y=dy + HH,
+        ax=sx, ay=sy - HH,
+        xref="x", yref="y", axref="x", ayref="y",
+        showarrow=True, arrowhead=2, arrowsize=1.2,
+        arrowwidth=1.8, arrowcolor="#888888",
+    )
+
+# Nodes
+for (cx, cy, title, subtitle, fill, border) in NODES:
+    fig_pipe.add_shape(
+        type="rect",
+        x0=cx-HW, y0=cy-HH, x1=cx+HW, y1=cy+HH,
+        line=dict(color=border, width=2),
+        fillcolor=fill, opacity=0.95,
+    )
+    fig_pipe.add_annotation(
+        x=cx, y=cy + 0.07,
+        text=f"<b>{title}</b>",
+        showarrow=False, font=dict(size=12, color="white"),
+        xref="x", yref="y", align="center",
+    )
+    fig_pipe.add_annotation(
+        x=cx, y=cy - 0.11,
+        text=subtitle,
+        showarrow=False, font=dict(size=9, color="#ccddee"),
+        xref="x", yref="y", align="center",
+    )
+
+fig_pipe.update_layout(
+    height=720,
+    margin=dict(l=10, r=10, t=10, b=10),
+    xaxis=dict(visible=False, range=[-0.08, 1.08]),
+    yaxis=dict(visible=False, range=[-0.95, 6.1]),
+    plot_bgcolor="#0e1117",
+    paper_bgcolor="#0e1117",
+)
+
+st.plotly_chart(fig_pipe, use_container_width=True)
+
 df = clean_data()
 fig = go.Figure()
 fig.add_trace(go.Scatter(

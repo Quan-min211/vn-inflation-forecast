@@ -159,12 +159,17 @@ adf_before = pd.DataFrame([adf_row(df[col], col) for col in var_vars_raw])
 display(adf_before)
 
 df_var = df[var_vars_raw].copy()
-non_stationary = adf_before.loc[~adf_before["stationary"], "variable"].tolist()
+transformed = []
 
-for col in non_stationary:
-    df_var[col] = df_var[col].diff()
-
-df_var = df_var.dropna()
+for _ in range(2):
+    adf_current = pd.DataFrame([adf_row(df_var[col], col) for col in var_vars_raw])
+    non_stationary = adf_current.loc[~adf_current["stationary"], "variable"].tolist()
+    if not non_stationary:
+        break
+    for col in non_stationary:
+        df_var[col] = df_var[col].diff()
+        transformed.append(col)
+    df_var = df_var.dropna()
 
 adf_after = pd.DataFrame([adf_row(df_var[col], col) for col in var_vars_raw])
 display(adf_after)
@@ -176,7 +181,7 @@ vif_df = pd.DataFrame({
 }).round(2)
 display(vif_df)
 
-print("Biến đã sai phân:", non_stationary)
+print("Biến đã sai phân:", transformed)
 print("Số quan sát VAR:", len(df_var))"""))
 
     cells.append(md("""## 5. Huấn luyện VAR theo hướng bản v1: VAR(1) và dự báo ngắn hạn
